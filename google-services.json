@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "752531317749",
+    "project_id": "expensemanager-59446",
+    "storage_bucket": "expensemanager-59446.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:752531317749:android:a2ff1c9a2bab9d956976bc",
+        "android_client_info": {
+          "package_name": "com.phi.sotheodoi"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "752531317749-d20r7l38tp1lhb74ohhgdvik5d1santo.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.phi.sotheodoi",
+            "certificate_hash": "216008622d08f8fc47287cea4a8a3f350d69de0d"
+          }
+        },
+        {
+          "client_id": "752531317749-e4hrffaq0ecef3gf1ro4mtbo2uogk3u1.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDxZbedGDSYlwiYeIeH80Qgx6RUJq4z_z0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "752531317749-e4hrffaq0ecef3gf1ro4mtbo2uogk3u1.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
