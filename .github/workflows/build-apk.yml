@@ -32,6 +32,12 @@ jobs:
       - name: Add Android platform
         run: npx cap add android
 
+      - name: Add Firebase config (google-services.json)
+        run: cp google-services.json android/app/google-services.json
+
+      - name: Patch Gradle files (google-services plugin + fixed debug keystore)
+        run: python3 scripts/patch_gradle.py
+
       - name: Generate app icons & splash screen
         run: npx @capacitor/assets generate --android
 
