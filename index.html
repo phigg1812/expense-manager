@@ -654,7 +654,9 @@ table.exp-table{width:100%;border-collapse:collapse;font-size:13px;min-width:760
   background:#1F2937;color:#fff;padding:11px 18px;border-radius:99px;font-size:13px;font-weight:600;
   display:flex;align-items:center;gap:8px;box-shadow:var(--shadow-lg);
   animation:toastIn .28s var(--ease);
+  white-space:nowrap;max-width:92vw;
 }
+.toast span:not(.t-dot){overflow:hidden;text-overflow:ellipsis;}
 [data-theme="dark"] .toast{background:#2C3646;}
 .toast.leaving{animation:toastOut .24s var(--ease) forwards;}
 @keyframes toastIn{from{opacity:0;transform:translateY(12px) scale(.95);}to{opacity:1;transform:translateY(0) scale(1);}}
