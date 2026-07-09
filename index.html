@@ -493,6 +493,7 @@ h1,h2,h3,h4{font-family:var(--font-display);font-weight:800;letter-spacing:-0.02
 .btn-primary:hover{background:var(--primary-dark);}
 .btn-danger{color:var(--danger);border-color:var(--danger-soft);}
 .btn-danger:hover{background:var(--danger-soft);}
+[data-theme="dark"] .btn-danger{border-color:rgba(242,85,90,.4);}
 .btn-sm{padding:6px 11px;font-size:12px;}
 .btn-icon-only{padding:9px;}
 
@@ -502,7 +503,10 @@ h1,h2,h3,h4{font-family:var(--font-display);font-weight:800;letter-spacing:-0.02
 }
 .filter-select{
   border:1px solid var(--border);background:var(--bg);border-radius:var(--radius-sm);
-  padding:7px 10px;font-size:12.5px;font-weight:600;color:var(--text);min-width:110px;
+  padding:7px 30px 7px 10px;font-size:12.5px;font-weight:600;color:var(--text);min-width:110px;
+  appearance:none;-webkit-appearance:none;-moz-appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%239CA3AF' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 8px center;background-size:14px;
 }
 .filter-chip{
   display:inline-flex;align-items:center;gap:6px;background:var(--primary-soft);color:var(--primary-dark);
@@ -636,6 +640,11 @@ table.exp-table{width:100%;border-collapse:collapse;font-size:13px;min-width:760
   padding:10px 12px;font-size:13.5px;color:var(--text);
   transition:border-color var(--dur-fast);
 }
+.field select{
+  padding-right:32px;appearance:none;-webkit-appearance:none;-moz-appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%239CA3AF' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 10px center;background-size:14px;
+}
 .field input:focus,.field select:focus,.field textarea:focus{outline:none;border-color:var(--primary);background:var(--card);}
 .field textarea{resize:vertical;min-height:70px;}
 .amount-input-wrap{position:relative;}
@@ -726,7 +735,12 @@ table.exp-table{width:100%;border-collapse:collapse;font-size:13px;min-width:760
 .settings-row:last-child{border-bottom:none;}
 .settings-row .s-label{font-weight:600;font-size:13.5px;}
 .settings-row .s-sub{font-size:11.5px;color:var(--text-secondary);margin-top:2px;}
-.settings-row select{border:1px solid var(--border);background:var(--bg);border-radius:var(--radius-sm);padding:8px 10px;font-weight:600;font-size:12.5px;}
+.settings-row select{
+  border:1px solid var(--border);background:var(--bg);border-radius:var(--radius-sm);padding:8px 30px 8px 10px;font-weight:600;font-size:12.5px;
+  appearance:none;-webkit-appearance:none;-moz-appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%239CA3AF' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 8px center;background-size:14px;
+}
 .theme-opts{display:flex;gap:10px;}
 .theme-opt{border:2px solid var(--border);border-radius:12px;padding:4px;cursor:pointer;}
 .theme-opt.active{border-color:var(--primary);}
@@ -1979,7 +1993,7 @@ function expenseCardHTML(exp){
     </div>
     <div class="exp-actions">
       <button class="btn btn-sm" data-action="edit" data-id="${exp.id}">${iconSVG('edit',13)} ${t('action.edit')}</button>
-      <button class="btn btn-sm btn-danger" data-action="delete" data-id="${exp.id}">${iconSVG('trash-2',13)}</button>
+      <button class="btn btn-sm btn-danger" data-action="delete" data-id="${exp.id}">${iconSVG('trash-2',13)} ${t('action.delete')}</button>
     </div>
   </div>`;
 }
@@ -2416,6 +2430,33 @@ const EMOJI_POOL = ['🍜','🚗','🏠','🎬','💊','🛍️','🧾','📦','
 function pickIcon(idx){ return EMOJI_POOL[idx % EMOJI_POOL.length]; }
 function pickColor(idx){ const colors=['#4F8EF7','#22C55E','#F59E0B','#EF4444','#8B5CF6','#EC4899','#06B6D4','#6B7280']; return colors[idx%colors.length]; }
 
+const CATEGORY_ICON_RULES = [
+  { keys:['điện thoại','sim','nạp thẻ','viễn thông'], icon:'📱' },
+  { keys:['quần áo','thời trang','giày dép','váy'], icon:'👕' },
+  { keys:['cà phê','coffee','trà sữa'], icon:'☕' },
+  { keys:['học','giáo dục','học phí','sách vở','khóa học'], icon:'🎓' },
+  { keys:['thú cưng','chó','mèo','pet'], icon:'🐾' },
+  { keys:['game','trò chơi','chơi game','giải trí','xem phim','netflix','rạp phim'], icon:'🎬' },
+  { keys:['du lịch','vé máy bay','máy bay','khách sạn','travel'], icon:'✈️' },
+  { keys:['hóa đơn','internet','wifi','cước','điện nước'], icon:'🧾' },
+  { keys:['tiền điện','điện sinh hoạt'], icon:'💡' },
+  { keys:['đồ dùng','sinh hoạt','gia dụng','vệ sinh'], icon:'📦' },
+  { keys:['mua sắm','shopee','lazada','tiki','mua đồ','mua hàng','shopping'], icon:'🛍️' },
+  { keys:['thuốc','sức khỏe','y tế','khám bệnh','bệnh viện'], icon:'💊' },
+  { keys:['nhà','thuê nhà','tiền nhà','chung cư','rent'], icon:'🏠' },
+  { keys:['xe','di chuyển','xăng','taxi','grab','xe máy','ô tô','gửi xe'], icon:'🚗' },
+  { keys:['ăn','ăn uống','thức ăn','đồ ăn','cơm','quán ăn','nhà hàng','food'], icon:'🍜' },
+];
+function autoIconForCategory(name, existingIcons){
+  const n = (name||'').toLowerCase();
+  for(const rule of CATEGORY_ICON_RULES){
+    if(rule.keys.some(k=>n.includes(k))) return rule.icon;
+  }
+  const used = new Set(existingIcons||[]);
+  const free = EMOJI_POOL.find(e=>!used.has(e));
+  return free || EMOJI_POOL[(existingIcons||[]).length % EMOJI_POOL.length];
+}
+
 function renderCategoryManageList(){
   const el = document.getElementById('categoryList');
   el.innerHTML = STATE.categories.map(c=>`
@@ -2435,7 +2476,7 @@ function renderCategoryManageList(){
 document.getElementById('addCategoryBtn').addEventListener('click', async ()=>{
   const input = document.getElementById('newCategoryInput');
   const name = input.value.trim(); if(!name) return;
-  const c = { id:uid('cat'), name, icon:pickIcon(STATE.categories.length), color:pickColor(STATE.categories.length) };
+  const c = { id:uid('cat'), name, icon:autoIconForCategory(name, STATE.categories.map(x=>x.icon)), color:pickColor(STATE.categories.length) };
   STATE.categories.push(c); await dbPut('categories', c);
   input.value=''; renderCategoryManageList();
 });
