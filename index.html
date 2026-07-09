@@ -19,7 +19,7 @@
      ============================================================ */
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js";
   import {
-    getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged,
+    getAuth, GoogleAuthProvider, signInWithRedirect, getRedirectResult, onAuthStateChanged,
     signOut, updateProfile
   } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js";
   import {
@@ -53,12 +53,22 @@
   };
 
   window.fbSignIn = function(){
-    return signInWithPopup(auth, googleProvider).catch(err=>{
+    // signInWithRedirect is used instead of signInWithPopup: popups are unreliable
+    // on mobile browsers/webviews (they get silently cancelled, e.g.
+    // "auth/cancelled-popup-request"). Redirect navigates away and back instead.
+    return signInWithRedirect(auth, googleProvider).catch(err=>{
       console.error('[Firebase] sign-in error', err);
       alert('Đăng nhập thất bại: ' + (err && (err.message || err.code) || 'Lỗi không xác định'));
     });
   };
   window.fbSignOut = function(){ return signOut(auth); };
+
+  // After a redirect sign-in, Firebase needs this call to pick up the result
+  // once the page reloads. Errors here (e.g. user closed the Google screen)
+  // are non-fatal, so we just log them instead of alerting.
+  getRedirectResult(auth).catch(err=>{
+    console.error('[Firebase] redirect sign-in error', err);
+  });
 
   onAuthStateChanged(auth, (user)=>{
     window.FB.currentUser = user;
@@ -214,6 +224,12 @@ h1,h2,h3,h4{font-family:var(--font-display);font-weight:800;letter-spacing:-0.02
 }
 .btn-google:hover{background:var(--bg);border-color:var(--primary);}
 .auth-card .auth-note{margin-top:var(--space-5);margin-bottom:0;font-size:11.5px;color:var(--text-secondary);opacity:.75;}
+.boot-spinner{
+  width:28px;height:28px;margin:0 auto var(--space-4);border-radius:50%;
+  border:3px solid var(--border);border-top-color:var(--primary);
+  animation:boot-spin .8s linear infinite;
+}
+@keyframes boot-spin{to{transform:rotate(360deg);}}
 
 /* Profile menu (account dropdown under the avatar) */
 .avatar-wrap{position:relative;flex-shrink:0;}
@@ -772,9 +788,26 @@ table.exp-table{width:100%;border-collapse:collapse;font-size:13px;min-width:760
 <body>
 
 <!-- ============================================================
+     BOOT LOADING — shown first, while Firebase restores any saved
+     session. Prevents a flash of the login screen for users who are
+     already signed in.
+     ============================================================ -->
+<div class="auth-gate" id="bootLoading">
+  <div class="auth-card">
+    <div class="logo-mark">
+      <svg viewBox="0 0 44 44" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <text x="22" y="35" text-anchor="middle" font-family="'Cream Cake', sans-serif" font-weight="700" font-size="42" fill="var(--primary)">B</text>
+      </svg>
+    </div>
+    <div class="boot-spinner" aria-hidden="true"></div>
+    <p style="margin-bottom:0;">Đang tải...</p>
+  </div>
+</div>
+
+<!-- ============================================================
      AUTH GATE — Google sign-in screen, shown while signed out
      ============================================================ -->
-<div class="auth-gate" id="authGate">
+<div class="auth-gate hidden" id="authGate">
   <div class="auth-card">
     <div class="logo-mark">
       <svg viewBox="0 0 44 44" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
@@ -2876,8 +2909,10 @@ async function initApp(){
 // The app is gated behind Firebase Google sign-in: data lives per-account in
 // Firestore, so nothing loads until we know who's signed in.
 window.onFirebaseAuthChange = async function(user){
+  const bootLoading = document.getElementById('bootLoading');
   const authGate = document.getElementById('authGate');
   const appShell = document.getElementById('appShell');
+  bootLoading.classList.add('hidden');
   if(user){
     authGate.classList.add('hidden');
     appShell.classList.remove('hidden');
