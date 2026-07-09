@@ -1,6 +1,6 @@
 {
-  "name": "Sổ theo dõi",
-  "short_name": "Sổ theo dõi",
+  "name": "Sổ Theo Dõi",
+  "short_name": "Sổ Theo Dõi",
   "description": "Quản lý và theo dõi chi tiêu cá nhân",
   "start_url": "./index.html",
   "scope": "./",
