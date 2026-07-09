@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Sổ theo dõi</title>
-<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 44 44'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='%2389B8FF'/%3E%3Cstop offset='1' stop-color='%233D74D6'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='44' height='44' rx='11' fill='%23EAF1FE'/%3E%3Cpath d='M16,8.5 C24,7.3 29.5,11 29.5,15.8 C29.5,20.6 24,22.3 16,22.3 M16,22.3 C26,21.1 32.5,25.6 32.5,30 C32.5,34.4 25.5,36.5 16,34.5 M16,8.5 L16,34.5' fill='none' stroke='url(%23g)' stroke-width='7' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cpath d='M16.5,9.3 C22.5,8.3 27,10.8 28.5,14' fill='none' stroke='%23fff' stroke-width='1.4' stroke-linecap='round' opacity='.5'/%3E%3C/svg%3E">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 44 44'%3E%3Crect width='44' height='44' rx='11' fill='%23EAF1FE'/%3E%3Ctext x='22' y='31' text-anchor='middle' font-family='Arial, sans-serif' font-weight='700' font-size='24' fill='%234F8EF7'%3EB%3C/text%3E%3C/svg%3E">
 <!--
   ============================================================
   SỔ THEO DÕI v1.0 — Personal Finance Management Web App
@@ -807,10 +807,6 @@ table.exp-table{width:100%;border-collapse:collapse;font-size:13px;min-width:760
         <span class="nav-icon" data-icon="check-circle"></span>
         <span class="nav-label" data-i18n="nav.paid">Đã thanh toán</span>
       </button>
-      <button class="nav-item" data-view="income">
-        <span class="nav-icon" data-icon="banknote"></span>
-        <span class="nav-label" data-i18n="nav.income">Khoản thu</span>
-      </button>
       <button class="nav-item" data-view="stats">
         <span class="nav-icon" data-icon="bar-chart"></span>
         <span class="nav-label" data-i18n="nav.stats">Thống kê</span>
@@ -957,7 +953,6 @@ table.exp-table{width:100%;border-collapse:collapse;font-size:13px;min-width:760
            ============================================================ -->
       <section class="view" id="view-pending" data-status="pending"></section>
       <section class="view" id="view-paid" data-status="paid"></section>
-      <section class="view" id="view-income"></section>
 
       <!-- ============================================================
            MODULE 06 — CALENDAR VIEW
@@ -1322,7 +1317,7 @@ const I18N = {
     'toast.exported':'Đã xuất file','toast.imported':'Đã nhập dữ liệu','toast.backupDone':'Đã sao lưu dữ liệu',
     'empty.title':'Chưa có khoản chi nào','empty.sub':'Nhấn nút + để thêm khoản chi đầu tiên của bạn',
     'confirm.deleteTitle':'Xóa khoản chi?','confirm.deleteDesc':'Hành động này không thể hoàn tác.',
-    'greet.morning':'Chào buổi sáng','greet.afternoon':'Chào buổi chiều','greet.evening':'Chào buổi tối',
+    'greet.morning':'Chào buổi sáng','greet.noon':'Chào buổi trưa','greet.afternoon':'Chào buổi chiều','greet.evening':'Chào buổi tối',
     'view.pendingTitle':'Chưa thanh toán','view.paidTitle':'Đã thanh toán',
     'table.name':'Tên','table.category':'Danh mục','table.amount':'Số tiền','table.due':'Hạn TT','table.status':'Trạng thái','table.wallet':'Ví',
     'common.unit':'khoản',
@@ -1338,14 +1333,6 @@ const I18N = {
     'list.loadMore':'Xem thêm',
     'month.noMore':'Không còn khoản chi nào khác trong tháng này.',
     'category.cannotDelete':'Không thể xóa danh mục đang được sử dụng','wallet.cannotDelete':'Không thể xóa ví đang được sử dụng',
-    'nav.income':'Khoản thu','income.add':'Thêm khoản thu','income.edit':'Sửa khoản thu','income.save':'Lưu khoản thu',
-    'income.name':'Tên khoản thu','income.namePh':'VD: Lương tháng 7','income.receivedDate':'Ngày nhận (dự kiến)',
-    'income.markReceived':'Đánh dấu đã nhận','income.deleteTitle':'Xóa khoản thu?',
-    'income.emptyTitle':'Chưa có khoản thu nào','income.emptySub':'Nhấn nút + để thêm khoản thu đầu tiên của bạn',
-    'income.receivedShort':'Đã nhận','income.expectedShort':'Dự kiến',
-    'income.categoriesTab':'Danh mục thu','income.categoriesDesc':'Quản lý danh mục khoản thu của bạn.','income.newCategoryPh':'Tên danh mục thu mới...',
-    'income.totalKpi':'Tổng thu','income.netBalance':'Số dư ròng','income.sortReceivedDate':'Sắp xếp: Ngày nhận',
-    'income.quickAdd':'Thêm khoản thu',
     'recurring.noItems':'Chưa có khoản chi định kỳ nào.',
     'backup.noItems':'Chưa có bản sao lưu nào.','backup.restoreTitle':'Khôi phục dữ liệu?','backup.restoreDesc':'Dữ liệu hiện tại sẽ được thay thế bằng dữ liệu trong file backup. Hành động này không thể hoàn tác.',
     'excel.invalidFile':'File không hợp lệ','excel.noData':'File không có dữ liệu','excel.readError':'Không thể đọc file Excel',
@@ -1382,7 +1369,7 @@ const I18N = {
     'toast.exported':'File exported','toast.imported':'Data imported','toast.backupDone':'Backup complete',
     'empty.title':'No expenses yet','empty.sub':'Tap the + button to add your first expense',
     'confirm.deleteTitle':'Delete this expense?','confirm.deleteDesc':'This action cannot be undone.',
-    'greet.morning':'Good morning','greet.afternoon':'Good afternoon','greet.evening':'Good evening',
+    'greet.morning':'Good morning','greet.noon':'Good noon','greet.afternoon':'Good afternoon','greet.evening':'Good evening',
     'view.pendingTitle':'Unpaid','view.paidTitle':'Paid',
     'table.name':'Name','table.category':'Category','table.amount':'Amount','table.due':'Due','table.status':'Status','table.wallet':'Wallet',
     'common.unit':'items',
@@ -1398,14 +1385,6 @@ const I18N = {
     'list.loadMore':'Load more',
     'month.noMore':'No more expenses this month.',
     'category.cannotDelete':'Cannot delete a category currently in use','wallet.cannotDelete':'Cannot delete a wallet currently in use',
-    'nav.income':'Income','income.add':'Add income','income.edit':'Edit income','income.save':'Save income',
-    'income.name':'Income name','income.namePh':'E.g. July salary','income.receivedDate':'Received date (expected)',
-    'income.markReceived':'Mark as received','income.deleteTitle':'Delete this income?',
-    'income.emptyTitle':'No income yet','income.emptySub':'Tap the + button to add your first income',
-    'income.receivedShort':'Received','income.expectedShort':'Expected',
-    'income.categoriesTab':'Income categories','income.categoriesDesc':'Manage your income categories.','income.newCategoryPh':'New income category...',
-    'income.totalKpi':'Total income','income.netBalance':'Net balance','income.sortReceivedDate':'Sort: Received date',
-    'income.quickAdd':'Add income',
     'recurring.noItems':'No recurring expenses yet.',
     'backup.noItems':'No backups yet.','backup.restoreTitle':'Restore data?','backup.restoreDesc':'Your current data will be replaced with the data from the backup file. This action cannot be undone.',
     'excel.invalidFile':'Invalid file','excel.noData':'File has no data','excel.readError':'Could not read Excel file',
@@ -1442,7 +1421,7 @@ const I18N = {
     'toast.exported':'文件已导出','toast.imported':'数据已导入','toast.backupDone':'备份完成',
     'empty.title':'暂无支出','empty.sub':'点击 + 按钮添加你的第一笔支出',
     'confirm.deleteTitle':'删除该支出？','confirm.deleteDesc':'此操作无法撤销。',
-    'greet.morning':'早上好','greet.afternoon':'下午好','greet.evening':'晚上好',
+    'greet.morning':'早上好','greet.noon':'中午好','greet.afternoon':'下午好','greet.evening':'晚上好',
     'view.pendingTitle':'未付款','view.paidTitle':'已付款',
     'table.name':'名称','table.category':'类别','table.amount':'金额','table.due':'到期日','table.status':'状态','table.wallet':'钱包',
     'common.unit':'笔',
@@ -1458,14 +1437,6 @@ const I18N = {
     'list.loadMore':'加载更多',
     'month.noMore':'本月没有更多支出了。',
     'category.cannotDelete':'无法删除正在使用的类别','wallet.cannotDelete':'无法删除正在使用的钱包',
-    'nav.income':'收入','income.add':'添加收入','income.edit':'编辑收入','income.save':'保存收入',
-    'income.name':'收入名称','income.namePh':'例如：7月工资','income.receivedDate':'收款日期（预计）',
-    'income.markReceived':'标记为已收款','income.deleteTitle':'删除该收入？',
-    'income.emptyTitle':'暂无收入','income.emptySub':'点击 + 按钮添加你的第一笔收入',
-    'income.receivedShort':'已收款','income.expectedShort':'预计',
-    'income.categoriesTab':'收入类别','income.categoriesDesc':'管理你的收入类别。','income.newCategoryPh':'新的收入类别...',
-    'income.totalKpi':'总收入','income.netBalance':'净结余','income.sortReceivedDate':'排序：收款日期',
-    'income.quickAdd':'添加收入',
     'recurring.noItems':'暂无定期支出。',
     'backup.noItems':'暂无备份。','backup.restoreTitle':'恢复数据？','backup.restoreDesc':'当前数据将被备份文件中的数据替换。此操作无法撤销。',
     'excel.invalidFile':'文件无效','excel.noData':'文件没有数据','excel.readError':'无法读取 Excel 文件',
@@ -1533,7 +1504,6 @@ async function dbClear(storeName){
    ============================================================ */
 const STATE = {
   expenses:[], categories:[], wallets:[], paymentMethods:[], recurring:[], backups:[],
-  income:[], incomeCategories:[],
   settings:{ language:'vi', currency:'VND', theme:'light', sidebarCollapsed:false },
   ui:{ currentView:'dashboard', listViewMode:'card', search:'', sort:{field:'dueDate',dir:'asc'},
        filters:{category:'all', wallet:'all', period:'all', minAmount:'', maxAmount:''},
@@ -1588,15 +1558,6 @@ const DEFAULT_PAYMENT_METHODS = [
   {id:'pm_cash', name:'Tiền mặt'}, {id:'pm_card', name:'Thẻ ngân hàng'},
   {id:'pm_transfer', name:'Chuyển khoản'}, {id:'pm_ewallet', name:'Ví điện tử'},
 ];
-const DEFAULT_INCOME_CATEGORIES = [
-  {id:'inccat_salary', name:'Lương', icon:'💼', color:'#4F8EF7'},
-  {id:'inccat_bonus', name:'Thưởng', icon:'🎁', color:'#F59E0B'},
-  {id:'inccat_invest', name:'Đầu tư', icon:'📈', color:'#22C55E'},
-  {id:'inccat_sale', name:'Bán hàng', icon:'🛒', color:'#EC4899'},
-  {id:'inccat_gift', name:'Quà tặng', icon:'🎉', color:'#8B5CF6'},
-  {id:'inccat_other', name:'Khác', icon:'💰', color:'#6B7280'},
-];
-
 async function seedIfEmpty(){
   const [cats, wallets, pms, settingsRows] = await Promise.all([
     dbGetAll('categories'), dbGetAll('wallets'), dbGetAll('paymentMethods'), dbGetAll('settings')
@@ -1647,7 +1608,6 @@ async function saveSettings(){
 function catById(id){ return STATE.categories.find(c=>c.id===id) || {name:'—',icon:'📦',color:'#6B7280'}; }
 function walById(id){ return STATE.wallets.find(w=>w.id===id) || {name:'—',icon:'👛'}; }
 function pmById(id){ return STATE.paymentMethods.find(p=>p.id===id) || {name:'—'}; }
-function incCatById(id){ return STATE.incomeCategories.find(c=>c.id===id) || {name:'—',icon:'💰',color:'#22C55E'}; }
 </script>
 <script>
 /* ============================================================
@@ -1756,7 +1716,7 @@ async function setCurrency(cur){
    MODULE — NAVIGATION / ROUTER + SIDEBAR BEHAVIOR
    ============================================================ */
 const VIEW_TITLE_KEYS = {
-  dashboard:'nav.dashboard', pending:'nav.pending', paid:'nav.paid', income:'nav.income',
+  dashboard:'nav.dashboard', pending:'nav.pending', paid:'nav.paid',
   stats:'nav.stats', calendar:'nav.calendar', settings:'nav.settings', backup:'nav.backup'
 };
 function switchView(name){
@@ -1773,7 +1733,6 @@ function renderCurrentView(force){
     case 'dashboard': renderDashboard(); break;
     case 'pending': renderListView('pending', force); break;
     case 'paid': renderListView('paid', force); break;
-    case 'income': renderIncomeListView(force); break;
     case 'calendar': renderCalendar(); break;
     case 'stats': renderStats(); break;
     case 'settings': renderSettings(); break;
@@ -1818,7 +1777,7 @@ function chartColors(){
 
 function renderHero(){
   const hour = new Date().getHours();
-  const greetKey = hour < 11 ? 'greet.morning' : hour < 18 ? 'greet.afternoon' : 'greet.evening';
+  const greetKey = hour < 11 ? 'greet.morning' : hour < 13 ? 'greet.noon' : hour < 18 ? 'greet.afternoon' : 'greet.evening';
   const name = STATE.settings.userName || 'bạn';
   document.getElementById('heroGreeting').textContent = `${t(greetKey)}, ${name} 👋`;
   const pending = STATE.expenses.filter(e=>!e.paid);
@@ -2857,7 +2816,7 @@ async function initApp(){
   await loadAllState();
   const fbUser = window.FB.currentUser;
   if(fbUser && (!STATE.settings.userName || STATE.settings.userName==='Phi')){
-    const guessedName = (fbUser.displayName||'').trim().split(' ').pop();
+    const guessedName = (fbUser.displayName||'').trim();
     if(guessedName){ STATE.settings.userName = guessedName; await saveSettings(); }
   }
   document.documentElement.setAttribute('lang', STATE.settings.language);
