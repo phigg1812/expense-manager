@@ -3,15 +3,68 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>Expense Manager</title>
-<link rel="icon" href="data:,">
+<title>Sổ theo dõi</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%23BFD7FF'/%3E%3Cstop offset='.55' stop-color='%234F8EF7'/%3E%3Cstop offset='1' stop-color='%233D74D6'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='40' height='40' rx='9' fill='%23EAF1FE'/%3E%3Ctext x='20' y='30' text-anchor='middle' font-family='Manrope,sans-serif' font-weight='800' font-size='27' fill='url(%23g)'%3E%CE%B2%3C/text%3E%3C/svg%3E">
 <!--
   ============================================================
-  EXPENSE MANAGER v1.0 — Personal Finance Management Web App
+  SỔ THEO DÕI v1.0 — Personal Finance Management Web App
   Single-file commercial-grade application.
   Modules are marked with banner comments below.
   ============================================================
 -->
+<script type="module">
+  /* ============================================================
+     FIREBASE — Auth (Google) + Firestore (sync) + Storage (avatar)
+     Exposes a small bridge on window.FB for the classic scripts below.
+     ============================================================ */
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js";
+  import {
+    getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged,
+    signOut, updateProfile
+  } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js";
+  import {
+    initializeFirestore, persistentLocalCache, persistentMultipleTabManager,
+    collection, doc, getDocs, setDoc, deleteDoc, writeBatch
+  } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
+  import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-storage.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyDL-4hDixuXZFi3YSp4keTw3Q1D5XUyDL8",
+    authDomain: "expensemanager-59446.firebaseapp.com",
+    projectId: "expensemanager-59446",
+    storageBucket: "expensemanager-59446.firebasestorage.app",
+    messagingSenderId: "752531317749",
+    appId: "1:752531317749:web:f1e169cb08117b446976bc"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const googleProvider = new GoogleAuthProvider();
+  // Offline-first cache: app keeps working with no network, then syncs when back online.
+  const db = initializeFirestore(app, {
+    localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() })
+  });
+  const storage = getStorage(app);
+
+  window.FB = {
+    app, auth, db, storage, googleProvider, currentUser: null,
+    collection, doc, getDocs, setDoc, deleteDoc, writeBatch,
+    ref, uploadBytes, getDownloadURL, updateProfile
+  };
+
+  window.fbSignIn = function(){
+    return signInWithPopup(auth, googleProvider).catch(err=>{
+      console.error('[Firebase] sign-in error', err);
+      alert('Đăng nhập thất bại: ' + (err && (err.message || err.code) || 'Lỗi không xác định'));
+    });
+  };
+  window.fbSignOut = function(){ return signOut(auth); };
+
+  onAuthStateChanged(auth, (user)=>{
+    window.FB.currentUser = user;
+    if (typeof window.onFirebaseAuthChange === 'function') window.onFirebaseAuthChange(user);
+  });
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet">
@@ -128,6 +181,54 @@ h1,h2,h3,h4{font-family:var(--font-display);font-weight:800;letter-spacing:-0.02
    MODULE 02 — APP SHELL / SIDEBAR / HEADER
    ============================================================ */
 .app-shell{display:flex;min-height:100vh;}
+.app-shell.hidden{display:none;}
+
+/* Auth gate — full screen sign-in screen shown while signed out */
+.auth-gate{
+  position:fixed;inset:0;z-index:200;background:var(--bg);
+  display:flex;align-items:center;justify-content:center;padding:20px;
+}
+.auth-gate.hidden{display:none;}
+.auth-card{
+  width:360px;max-width:100%;text-align:center;
+  background:var(--card);border:1px solid var(--border);border-radius:var(--radius);
+  padding:var(--space-8) var(--space-6);box-shadow:var(--shadow-lg);
+}
+.auth-card .logo-mark{width:56px;height:56px;border-radius:16px;margin:0 auto var(--space-4);background:var(--primary-soft);display:flex;align-items:center;justify-content:center;box-shadow:inset 0 0 0 1px rgba(79,142,247,.18);}
+.auth-card .logo-mark svg{width:38px;height:38px;}
+.auth-card h1{font-family:var(--font-display);font-weight:800;font-size:22px;margin-bottom:6px;}
+.auth-card p{font-size:13px;color:var(--text-secondary);line-height:1.6;margin-bottom:var(--space-6);}
+.btn-google{
+  width:100%;display:flex;align-items:center;justify-content:center;gap:10px;
+  padding:12px 16px;border-radius:var(--radius-sm);border:1px solid var(--border);
+  background:var(--card);color:var(--text);font-weight:600;font-size:14px;cursor:pointer;
+  transition:background var(--dur-fast), border-color var(--dur-fast);
+}
+.btn-google:hover{background:var(--bg);border-color:var(--primary);}
+.auth-card .auth-note{margin-top:var(--space-5);margin-bottom:0;font-size:11.5px;color:var(--text-secondary);opacity:.75;}
+
+/* Profile menu (account dropdown under the avatar) */
+.avatar-wrap{position:relative;flex-shrink:0;}
+.avatar-btn{overflow:hidden;cursor:pointer;padding:0;}
+.avatar-btn img{width:100%;height:100%;object-fit:cover;border-radius:99px;}
+.avatar-btn img.hidden{display:none;}
+.profile-menu{
+  position:absolute;top:calc(100% + 10px);right:0;width:250px;z-index:60;
+  background:var(--card);border:1px solid var(--border);border-radius:var(--radius);
+  box-shadow:var(--shadow-lg);padding:var(--space-2);
+}
+.profile-menu.hidden{display:none;}
+.profile-menu-header{display:flex;align-items:center;gap:10px;padding:var(--space-3);border-bottom:1px solid var(--border);margin-bottom:var(--space-2);}
+.profile-menu-avatar{width:40px;height:40px;border-radius:99px;object-fit:cover;background:var(--primary-soft);flex-shrink:0;}
+.profile-menu-name{font-size:13.5px;font-weight:700;line-height:1.3;}
+.profile-menu-email{font-size:11.5px;color:var(--text-secondary);word-break:break-all;line-height:1.3;}
+.profile-menu-item{
+  display:flex;align-items:center;gap:10px;width:100%;text-align:left;
+  padding:9px 10px;border-radius:8px;border:none;background:none;
+  font-size:13px;color:var(--text);cursor:pointer;font-family:inherit;
+}
+.profile-menu-item:hover{background:var(--bg);}
+.profile-menu-item.danger{color:#EF4444;}
 
 /* Sidebar */
 .sidebar{
@@ -146,13 +247,13 @@ h1,h2,h3,h4{font-family:var(--font-display);font-weight:800;letter-spacing:-0.02
   border-bottom:1px solid var(--border);
 }
 .sidebar-brand .logo-mark{
-  width:32px;height:32px;border-radius:10px;flex-shrink:0;
-  background:linear-gradient(135deg,var(--primary),#7CB2FF);
+  width:34px;height:34px;border-radius:10px;flex-shrink:0;
+  background:var(--primary-soft);
   display:flex;align-items:center;justify-content:center;
-  color:#fff;font-weight:800;font-family:var(--font-display);font-size:15px;
-  box-shadow:0 4px 10px rgba(79,142,247,.35);
+  box-shadow:inset 0 0 0 1px rgba(79,142,247,.18);
 }
-.sidebar-brand .logo-text{font-family:var(--font-display);font-weight:800;font-size:16px;white-space:nowrap;overflow:hidden;transition:opacity var(--dur) var(--ease);}
+.sidebar-brand .logo-mark svg{width:24px;height:24px;display:block;}
+.sidebar-brand .logo-text{font-family:var(--font-display);font-weight:800;font-size:15px;white-space:nowrap;overflow:hidden;transition:opacity var(--dur) var(--ease);}
 .sidebar.collapsed .logo-text,
 .sidebar.collapsed .nav-label,
 .sidebar.collapsed .nav-section-title{opacity:0;pointer-events:none;width:0;}
@@ -328,7 +429,7 @@ h1,h2,h3,h4{font-family:var(--font-display);font-weight:800;letter-spacing:-0.02
   background:linear-gradient(135deg,var(--primary-soft),var(--card));
   border:1px solid var(--border);border-radius:var(--radius);
   padding:var(--space-5);margin-bottom:var(--space-6);
-  display:flex;gap:14px;align-items:flex-start;
+  display:flex;gap:14px;align-items:center;
 }
 .insight-icon{
   width:38px;height:38px;border-radius:10px;background:var(--card);
@@ -645,7 +746,36 @@ table.exp-table{width:100%;border-collapse:collapse;font-size:13px;min-width:760
 </style>
 </head>
 <body>
-<div class="app-shell">
+
+<!-- ============================================================
+     AUTH GATE — Google sign-in screen, shown while signed out
+     ============================================================ -->
+<div class="auth-gate" id="authGate">
+  <div class="auth-card">
+    <div class="logo-mark">
+      <svg viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <defs>
+          <linearGradient id="logoGradAuth" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="#BFD7FF"/>
+            <stop offset="0.55" stop-color="var(--primary)"/>
+            <stop offset="1" stop-color="var(--primary-dark)"/>
+          </linearGradient>
+        </defs>
+        <text x="21.5" y="31.5" text-anchor="middle" font-family="Manrope, sans-serif" font-weight="800" font-size="30" fill="var(--primary-dark)" opacity="0.35">β</text>
+        <text x="20" y="30" text-anchor="middle" font-family="Manrope, sans-serif" font-weight="800" font-size="30" fill="url(#logoGradAuth)">β</text>
+      </svg>
+    </div>
+    <h1>Sổ theo dõi</h1>
+    <p>Đăng nhập để lưu và đồng bộ dữ liệu chi tiêu của bạn trên mọi thiết bị.</p>
+    <button class="btn-google" id="googleSignInBtn">
+      <svg width="18" height="18" viewBox="0 0 18 18"><path fill="#4285F4" d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.48h4.84a4.14 4.14 0 0 1-1.8 2.72v2.26h2.9c1.7-1.57 2.7-3.88 2.7-6.62z"/><path fill="#34A853" d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.9-2.26c-.8.54-1.84.86-3.06.86-2.35 0-4.34-1.59-5.05-3.72H.98v2.33A9 9 0 0 0 9 18z"/><path fill="#FBBC05" d="M3.95 10.7A5.4 5.4 0 0 1 3.66 9c0-.59.1-1.17.29-1.7V4.97H.98A9 9 0 0 0 0 9c0 1.45.35 2.83.98 4.03z"/><path fill="#EA4335" d="M9 3.58c1.32 0 2.51.45 3.44 1.35l2.58-2.58C13.46.89 11.43 0 9 0A9 9 0 0 0 .98 4.97L3.95 7.3C4.66 5.17 6.65 3.58 9 3.58z"/></svg>
+      Đăng nhập bằng Google
+    </button>
+    <p class="auth-note">Dữ liệu được lưu riêng theo tài khoản Google của bạn và tự động đồng bộ.</p>
+  </div>
+</div>
+
+<div class="app-shell hidden" id="appShell">
 
   <!-- ============================================================
        MODULE 02 — SIDEBAR
@@ -653,8 +783,20 @@ table.exp-table{width:100%;border-collapse:collapse;font-size:13px;min-width:760
   <div class="sidebar-overlay" id="sidebarOverlay"></div>
   <aside class="sidebar scrollbar-thin" id="sidebar">
     <div class="sidebar-brand">
-      <div class="logo-mark">₫</div>
-      <div class="logo-text">Expense<span style="color:var(--primary)">.</span></div>
+      <div class="logo-mark">
+        <svg viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <defs>
+            <linearGradient id="logoGrad" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stop-color="#BFD7FF"/>
+              <stop offset="0.55" stop-color="var(--primary)"/>
+              <stop offset="1" stop-color="var(--primary-dark)"/>
+            </linearGradient>
+          </defs>
+          <text x="21.5" y="31.5" text-anchor="middle" font-family="Manrope, sans-serif" font-weight="800" font-size="30" fill="var(--primary-dark)" opacity="0.35">β</text>
+          <text x="20" y="30" text-anchor="middle" font-family="Manrope, sans-serif" font-weight="800" font-size="30" fill="url(#logoGrad)">β</text>
+        </svg>
+      </div>
+      <div class="logo-text">Sổ <span style="color:var(--primary)">theo dõi</span></div>
     </div>
     <nav class="sidebar-nav scrollbar-thin">
       <div class="nav-section-title" data-i18n="nav.menu">Menu</div>
@@ -711,7 +853,25 @@ table.exp-table{width:100%;border-collapse:collapse;font-size:13px;min-width:760
       </div>
       <button class="icon-btn" id="themeToggleBtn" title="Theme"><span data-icon="moon"></span></button>
       <button class="icon-btn" id="quickAddBtn" title="Thêm nhanh (N)"><span data-icon="plus"></span></button>
-      <div class="avatar-btn" id="userAvatar">P</div>
+      <div class="avatar-wrap">
+        <button class="avatar-btn" id="userAvatar" title="Tài khoản">
+          <img id="userAvatarImg" class="hidden" alt="Ảnh đại diện">
+          <span id="userAvatarInitial">P</span>
+        </button>
+        <div class="profile-menu hidden" id="profileMenu">
+          <div class="profile-menu-header">
+            <img class="profile-menu-avatar" id="profileMenuAvatar" alt="">
+            <div>
+              <div class="profile-menu-name" id="profileMenuName">—</div>
+              <div class="profile-menu-email" id="profileMenuEmail">—</div>
+            </div>
+          </div>
+          <label class="profile-menu-item" for="avatarUploadInput"><span data-icon="image"></span>Đổi ảnh đại diện</label>
+          <input type="file" id="avatarUploadInput" accept="image/*" class="hidden">
+          <button class="profile-menu-item" id="editNameBtn"><span data-icon="user"></span>Đổi tên hiển thị</button>
+          <button class="profile-menu-item danger" id="signOutBtn"><span data-icon="log-out"></span>Đăng xuất</button>
+        </div>
+      </div>
     </header>
 
     <div class="main-content">
@@ -861,7 +1021,7 @@ table.exp-table{width:100%;border-collapse:collapse;font-size:13px;min-width:760
             <button class="active" data-panel="general" data-i18n="settings.general">Chung</button>
             <button data-panel="categories" data-i18n="settings.categories">Danh mục</button>
             <button data-panel="wallets" data-i18n="settings.wallets">Ví</button>
-            <button data-panel="payment">Phương thức TT</button>
+            <button data-panel="payment" data-i18n="settings.payment">Phương thức TT</button>
             <button data-panel="recurring" data-i18n="settings.recurring">Chi định kỳ</button>
           </div>
 
@@ -900,10 +1060,10 @@ table.exp-table{width:100%;border-collapse:collapse;font-size:13px;min-width:760
           </div>
 
           <div class="settings-panel hidden" id="panel-payment">
-            <h3>Phương thức thanh toán</h3>
-            <div class="desc">Quản lý các phương thức thanh toán.</div>
+            <h3 data-i18n="settings.payment">Phương thức thanh toán</h3>
+            <div class="desc" data-i18n="settings.paymentDesc">Quản lý các phương thức thanh toán.</div>
             <div class="manage-list" id="paymentList"></div>
-            <div class="add-inline"><input type="text" id="newPaymentInput" placeholder="Phương thức mới..."><button class="btn btn-primary btn-sm" id="addPaymentBtn"><span data-icon="plus"></span></button></div>
+            <div class="add-inline"><input type="text" id="newPaymentInput" data-i18n-ph="settings.paymentNew" placeholder="Phương thức mới..."><button class="btn btn-primary btn-sm" id="addPaymentBtn"><span data-icon="plus"></span></button></div>
           </div>
 
           <div class="settings-panel hidden" id="panel-recurring">
@@ -1107,7 +1267,10 @@ const ICONS = {
   'arrow-up-down':'<path d="m21 16-4 4-4-4"/><path d="M17 20V4"/><path d="m3 8 4-4 4 4"/><path d="M7 4v16"/>',
   undo:'<path d="M4 9h9a5 5 0 0 1 0 10h-2"/><path d="m4 9 4-4M4 9l4 4"/>',
   banknote:'<rect x="2.5" y="6.5" width="19" height="11" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6.5 6.5v0M17.5 17.5v0"/>',
-  repeat:'<path d="m17 2 4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="m7 22-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/>'
+  repeat:'<path d="m17 2 4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="m7 22-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/>',
+  image:'<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9.5" r="1.7"/><path d="m4 17 5-5 3.5 3.5L17 11l3 3"/>',
+  user:'<circle cx="12" cy="8" r="4"/><path d="M4.5 20.5a7.5 7.5 0 0 1 15 0"/>',
+  'log-out':'<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/>'
 };
 function iconSVG(name,size){
   size = size||18;
@@ -1144,6 +1307,7 @@ const I18N = {
     'settings.language':'Ngôn ngữ','settings.languageSub':'Đổi ngôn ngữ hiển thị','settings.currency':'Tiền tệ','settings.theme':'Giao diện',
     'settings.categories':'Danh mục','settings.categoriesDesc':'Quản lý danh mục chi tiêu của bạn.',
     'settings.wallets':'Ví','settings.walletsDesc':'Quản lý các ví / nguồn tiền của bạn.',
+    'settings.payment':'Phương thức TT','settings.paymentDesc':'Quản lý các phương thức thanh toán.','settings.paymentNew':'Phương thức mới...',
     'settings.recurring':'Chi định kỳ','settings.recurringDesc':'Các khoản tự động sinh theo chu kỳ (tiền nhà, internet, Netflix...).',
     'recurring.add':'Thêm khoản định kỳ','recurring.cycle':'Chu kỳ lặp lại','recurring.monthly':'Hàng tháng','recurring.weekly':'Hàng tuần','recurring.yearly':'Hàng năm','recurring.dayOfMonth':'Ngày sinh khoản (trong tháng)',
     'backup.title':'Sao lưu & Khôi phục','backup.desc':'Toàn bộ dữ liệu được lưu cục bộ trên máy bạn (IndexedDB). Hãy sao lưu định kỳ.',
@@ -1195,6 +1359,7 @@ const I18N = {
     'settings.language':'Language','settings.languageSub':'Change display language','settings.currency':'Currency','settings.theme':'Theme',
     'settings.categories':'Categories','settings.categoriesDesc':'Manage your expense categories.',
     'settings.wallets':'Wallets','settings.walletsDesc':'Manage your wallets / money sources.',
+    'settings.payment':'Payment methods','settings.paymentDesc':'Manage your payment methods.','settings.paymentNew':'New payment method...',
     'settings.recurring':'Recurring expenses','settings.recurringDesc':'Items generated automatically on a cycle (rent, internet, Netflix...).',
     'recurring.add':'Add recurring expense','recurring.cycle':'Repeat cycle','recurring.monthly':'Monthly','recurring.weekly':'Weekly','recurring.yearly':'Yearly','recurring.dayOfMonth':'Generate on day (of month)',
     'backup.title':'Backup & Restore','backup.desc':'All data is stored locally on your device (IndexedDB). Back up regularly.',
@@ -1246,6 +1411,7 @@ const I18N = {
     'settings.language':'语言','settings.languageSub':'更改显示语言','settings.currency':'货币','settings.theme':'外观',
     'settings.categories':'类别','settings.categoriesDesc':'管理你的支出类别。',
     'settings.wallets':'钱包','settings.walletsDesc':'管理你的钱包 / 资金来源。',
+    'settings.payment':'支付方式','settings.paymentDesc':'管理你的支付方式。','settings.paymentNew':'新的支付方式...',
     'settings.recurring':'定期支出','settings.recurringDesc':'按周期自动生成的项目（房租、网费、Netflix 等）。',
     'recurring.add':'添加定期支出','recurring.cycle':'重复周期','recurring.monthly':'每月','recurring.weekly':'每周','recurring.yearly':'每年','recurring.dayOfMonth':'生成日（每月）',
     'backup.title':'备份与恢复','backup.desc':'所有数据均本地存储在你的设备上（IndexedDB）。请定期备份。',
@@ -1297,59 +1463,46 @@ function applyI18n(root){
 </script>
 <script>
 /* ============================================================
-   MODULE 09 — DATABASE (IndexedDB wrapper)
-   Schema: expenseDB { expenses, settings, categories, wallets, backups, paymentMethods, recurring }
+   MODULE 09 — DATABASE (Firestore wrapper, synced across devices)
+   Schema: users/{uid}/{expenses|settings|categories|wallets|backups|paymentMethods|recurring}/{docId}
+   Keeps the exact same function signatures the rest of the app already
+   uses (openDB/dbGetAll/dbPut/dbDelete/dbClear) so nothing else changes.
+   Firestore's local cache (enabled in <head>) keeps this working offline
+   too, syncing automatically once the connection is back.
    ============================================================ */
-const DB_NAME='expenseDB', DB_VERSION=1;
-let dbInstance=null;
-
-function openDB(){
-  return new Promise((resolve,reject)=>{
-    const req = indexedDB.open(DB_NAME, DB_VERSION);
-    req.onupgradeneeded = (e)=>{
-      const db = e.target.result;
-      if(!db.objectStoreNames.contains('expenses')) db.createObjectStore('expenses',{keyPath:'id'});
-      if(!db.objectStoreNames.contains('settings')) db.createObjectStore('settings',{keyPath:'key'});
-      if(!db.objectStoreNames.contains('categories')) db.createObjectStore('categories',{keyPath:'id'});
-      if(!db.objectStoreNames.contains('wallets')) db.createObjectStore('wallets',{keyPath:'id'});
-      if(!db.objectStoreNames.contains('backups')) db.createObjectStore('backups',{keyPath:'id'});
-      if(!db.objectStoreNames.contains('paymentMethods')) db.createObjectStore('paymentMethods',{keyPath:'id'});
-      if(!db.objectStoreNames.contains('recurring')) db.createObjectStore('recurring',{keyPath:'id'});
-    };
-    req.onsuccess = (e)=>{ dbInstance = e.target.result; resolve(dbInstance); };
-    req.onerror = (e)=> reject(e.target.error);
-  });
+const STORE_KEYFIELD = { settings:'key' }; // every other store keys by 'id'
+function keyFieldFor(storeName){ return STORE_KEYFIELD[storeName] || 'id'; }
+function requireUid(){
+  const uid = window.FB.currentUser && window.FB.currentUser.uid;
+  if(!uid) throw new Error('Chưa đăng nhập — không thể truy cập dữ liệu.');
+  return uid;
 }
-function tx(storeName, mode){
-  return dbInstance.transaction(storeName, mode).objectStore(storeName);
+function storeCollection(storeName){
+  return window.FB.collection(window.FB.db, 'users', requireUid(), storeName);
 }
-function dbGetAll(storeName){
-  return new Promise((resolve,reject)=>{
-    const req = tx(storeName,'readonly').getAll();
-    req.onsuccess=()=>resolve(req.result||[]);
-    req.onerror=()=>reject(req.error);
-  });
+function storeDoc(storeName, id){
+  return window.FB.doc(window.FB.db, 'users', requireUid(), storeName, String(id));
 }
-function dbPut(storeName,value){
-  return new Promise((resolve,reject)=>{
-    const req = tx(storeName,'readwrite').put(value);
-    req.onsuccess=()=>resolve(value);
-    req.onerror=()=>reject(req.error);
-  });
+async function openDB(){ return true; /* Firestore app/instance already initialized in <head> */ }
+async function dbGetAll(storeName){
+  const snap = await window.FB.getDocs(storeCollection(storeName));
+  const rows = [];
+  snap.forEach(d=> rows.push(d.data()));
+  return rows;
 }
-function dbDelete(storeName,key){
-  return new Promise((resolve,reject)=>{
-    const req = tx(storeName,'readwrite').delete(key);
-    req.onsuccess=()=>resolve();
-    req.onerror=()=>reject(req.error);
-  });
+async function dbPut(storeName, value){
+  const kf = keyFieldFor(storeName);
+  await window.FB.setDoc(storeDoc(storeName, value[kf]), value);
+  return value;
 }
-function dbClear(storeName){
-  return new Promise((resolve,reject)=>{
-    const req = tx(storeName,'readwrite').clear();
-    req.onsuccess=()=>resolve();
-    req.onerror=()=>reject(req.error);
-  });
+async function dbDelete(storeName, key){
+  await window.FB.deleteDoc(storeDoc(storeName, key));
+}
+async function dbClear(storeName){
+  const snap = await window.FB.getDocs(storeCollection(storeName));
+  const batch = window.FB.writeBatch(window.FB.db);
+  snap.forEach(d=> batch.delete(d.ref));
+  await batch.commit();
 }
 
 /* ============================================================
@@ -2442,7 +2595,7 @@ function downloadJSON(obj, filename){
 }
 async function exportBackup(){
   const payload = buildBackupPayload();
-  const filename = `ExpenseManager_Backup_${todayISO()}.json`;
+  const filename = `SoTheoDoi_Backup_${todayISO()}.json`;
   downloadJSON(payload, filename);
   const record = { id:uid('bk'), createdAt:Date.now(), filename, count:STATE.expenses.length };
   STATE.backups.unshift(record);
@@ -2509,7 +2662,7 @@ function exportExcel(list, suffix){
   ws['!cols'] = [{wch:26},{wch:14},{wch:16},{wch:12},{wch:14},{wch:16},{wch:14},{wch:16},{wch:24}];
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Expenses');
-  XLSX.writeFile(wb, `ExpenseManager_${suffix?suffix+'_':''}${todayISO()}.xlsx`);
+  XLSX.writeFile(wb, `SoTheoDoi_${suffix?suffix+'_':''}${todayISO()}.xlsx`);
   showToast(t('toast.exported'));
 }
 function findCategoryByName(name){
@@ -2605,13 +2758,74 @@ document.addEventListener('keydown',(e)=>{
 });
 
 /* ============================================================
+   MODULE — ACCOUNT / PROFILE (Google sign-in UI)
+   ============================================================ */
+function updateProfileUI(user){
+  const initial = ((user.displayName||user.email||'?').trim().charAt(0)||'?').toUpperCase();
+  const imgEl = document.getElementById('userAvatarImg');
+  const initEl = document.getElementById('userAvatarInitial');
+  if(user.photoURL){
+    imgEl.src = user.photoURL; imgEl.classList.remove('hidden'); initEl.classList.add('hidden');
+  } else {
+    imgEl.classList.add('hidden'); initEl.classList.remove('hidden'); initEl.textContent = initial;
+  }
+  document.getElementById('profileMenuAvatar').src = user.photoURL || ('data:image/svg+xml,'+encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40"><rect width="40" height="40" rx="99" fill="#EAF1FE"/><text x="20" y="27" text-anchor="middle" font-family="sans-serif" font-weight="700" font-size="16" fill="#4F8EF7">${initial}</text></svg>`));
+  document.getElementById('profileMenuName').textContent = user.displayName || 'Người dùng';
+  document.getElementById('profileMenuEmail').textContent = user.email || '';
+}
+document.getElementById('googleSignInBtn').addEventListener('click', ()=> window.fbSignIn());
+document.getElementById('userAvatar').addEventListener('click', (e)=>{
+  e.stopPropagation();
+  document.getElementById('profileMenu').classList.toggle('hidden');
+});
+document.addEventListener('click', ()=> document.getElementById('profileMenu').classList.add('hidden'));
+document.getElementById('signOutBtn').addEventListener('click', ()=>{
+  document.getElementById('profileMenu').classList.add('hidden');
+  window.fbSignOut();
+});
+document.getElementById('editNameBtn').addEventListener('click', async ()=>{
+  document.getElementById('profileMenu').classList.add('hidden');
+  const user = window.FB.auth.currentUser;
+  const name = prompt('Nhập tên hiển thị mới:', user.displayName || '');
+  if(name===null || !name.trim()) return;
+  try{
+    await window.FB.updateProfile(user, {displayName: name.trim()});
+    updateProfileUI(window.FB.auth.currentUser);
+    STATE.settings.userName = name.trim().split(' ').pop();
+    await saveSettings();
+    renderHero();
+    if(typeof showToast==='function') showToast('Đã cập nhật tên hiển thị');
+  }catch(err){ alert('Không thể cập nhật tên: '+(err.message||err)); }
+});
+document.getElementById('avatarUploadInput').addEventListener('change', async (e)=>{
+  const file = e.target.files[0]; if(!file) return;
+  const user = window.FB.auth.currentUser;
+  try{
+    const storageRef = window.FB.ref(window.FB.storage, `avatars/${user.uid}`);
+    await window.FB.uploadBytes(storageRef, file);
+    const url = await window.FB.getDownloadURL(storageRef);
+    await window.FB.updateProfile(user, {photoURL:url});
+    updateProfileUI(window.FB.auth.currentUser);
+    document.getElementById('profileMenu').classList.add('hidden');
+    if(typeof showToast==='function') showToast('Đã cập nhật ảnh đại diện');
+  }catch(err){ alert('Không thể tải ảnh lên: '+(err.message||err)); }
+  finally{ e.target.value=''; }
+});
+
+/* ============================================================
    MODULE — APP INIT
    ============================================================ */
+let appBooted = false;
 async function initApp(){
   renderIcons();
   await openDB();
   await seedIfEmpty();
   await loadAllState();
+  const fbUser = window.FB.currentUser;
+  if(fbUser && (!STATE.settings.userName || STATE.settings.userName==='Phi')){
+    const guessedName = (fbUser.displayName||'').trim().split(' ').pop();
+    if(guessedName){ STATE.settings.userName = guessedName; await saveSettings(); }
+  }
   document.documentElement.setAttribute('lang', STATE.settings.language);
   document.documentElement.setAttribute('data-theme', STATE.settings.theme);
   if(STATE.settings.sidebarCollapsed){
@@ -2619,15 +2833,34 @@ async function initApp(){
     document.getElementById('mainCol').classList.add('sidebar-collapsed');
   }
   document.getElementById('fCurrencySuffix').textContent = CURRENCY_SYMBOLS[STATE.settings.currency]||'đ';
-  const userInitial = (STATE.settings.userName||'P').charAt(0).toUpperCase();
-  document.getElementById('userAvatar').textContent = userInitial;
   applyI18n();
   applyTheme();
   const changed = await processRecurring();
   switchView('dashboard');
   renderIcons();
 }
-initApp();
+// The app is gated behind Firebase Google sign-in: data lives per-account in
+// Firestore, so nothing loads until we know who's signed in.
+window.onFirebaseAuthChange = async function(user){
+  const authGate = document.getElementById('authGate');
+  const appShell = document.getElementById('appShell');
+  if(user){
+    authGate.classList.add('hidden');
+    appShell.classList.remove('hidden');
+    updateProfileUI(user);
+    try{
+      await initApp();
+      appBooted = true;
+    }catch(err){
+      console.error('[initApp] failed', err);
+      alert('Không thể tải dữ liệu: '+(err.message||err));
+    }
+  } else {
+    appShell.classList.add('hidden');
+    authGate.classList.remove('hidden');
+    appBooted = false;
+  }
+};
 </script>
 </body>
 </html>
