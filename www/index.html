@@ -54,7 +54,22 @@
     ref, uploadBytes, getDownloadURL, updateProfile
   };
 
+  function isNativeApp(){
+    return !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
+  }
+
   window.fbSignIn = function(){
+    if (isNativeApp()) {
+      // Inside the packaged Android app, Google blocks sign-in via WebView popups/
+      // redirects for security reasons. Use the native Google Sign-In SDK instead
+      // (via the @capacitor-firebase/authentication plugin), which also syncs the
+      // result into this same Firebase Auth JS instance automatically.
+      const { FirebaseAuthentication } = window.Capacitor.Plugins;
+      return FirebaseAuthentication.signInWithGoogle().catch(err=>{
+        console.error('[Firebase] native sign-in error', err);
+        alert('Đăng nhập thất bại: ' + (err && (err.message || err.code) || 'Lỗi không xác định'));
+      });
+    }
     // signInWithRedirect is used instead of signInWithPopup: popups are unreliable
     // on mobile browsers/webviews (they get silently cancelled, e.g.
     // "auth/cancelled-popup-request"). Redirect navigates away and back instead.
@@ -63,7 +78,15 @@
       alert('Đăng nhập thất bại: ' + (err && (err.message || err.code) || 'Lỗi không xác định'));
     });
   };
-  window.fbSignOut = function(){ return signOut(auth); };
+  window.fbSignOut = function(){
+    if (isNativeApp()) {
+      const { FirebaseAuthentication } = window.Capacitor.Plugins;
+      return FirebaseAuthentication.signOut().catch(err=>{
+        console.error('[Firebase] native sign-out error', err);
+      }).finally(()=> signOut(auth));
+    }
+    return signOut(auth);
+  };
 
   // After a redirect sign-in, Firebase needs this call to pick up the result
   // once the page reloads. Errors here (e.g. user closed the Google screen)
