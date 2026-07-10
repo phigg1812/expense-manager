@@ -16,6 +16,7 @@ import sys
 
 ROOT_GRADLE = "android/build.gradle"
 APP_GRADLE = "android/app/build.gradle"
+VARIABLES_GRADLE = "android/variables.gradle"
 
 SIGNING_BLOCK = """
 // --- Added by scripts/patch_gradle.py: fixed debug keystore ---
@@ -33,6 +34,16 @@ android {
             signingConfig signingConfigs.debug
         }
     }
+}
+"""
+
+GOOGLE_SIGNIN_EXT_BLOCK = """
+// --- Added by scripts/patch_gradle.py: bundle the native Google Sign-In SDK ---
+// Required by @capacitor-firebase/authentication, otherwise the app crashes on
+// launch with: NoClassDefFoundError: Lcom/google/android/gms/auth/api/signin/GoogleSignIn
+ext {
+    rgcfaIncludeGoogle = true
+    androidxCredentialsVersion = '1.3.0'
 }
 """
 
@@ -85,6 +96,21 @@ def patch_app_gradle():
             f.write(content)
 
 
+def patch_variables_gradle():
+    with open(VARIABLES_GRADLE, "r", encoding="utf-8") as f:
+        content = f.read()
+
+    if "rgcfaIncludeGoogle" in content:
+        print(f"[skip] {VARIABLES_GRADLE} already includes rgcfaIncludeGoogle")
+        return
+
+    content += GOOGLE_SIGNIN_EXT_BLOCK
+    with open(VARIABLES_GRADLE, "w", encoding="utf-8") as f:
+        f.write(content)
+    print(f"[ok] enabled native Google Sign-In SDK in {VARIABLES_GRADLE}")
+
+
 if __name__ == "__main__":
     patch_root_gradle()
     patch_app_gradle()
+    patch_variables_gradle()
