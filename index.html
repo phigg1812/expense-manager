@@ -2914,7 +2914,7 @@ document.getElementById('editNameBtn').addEventListener('click', async ()=>{
   try{
     await window.FB.updateProfile(user, {displayName: name.trim()});
     updateProfileUI(window.FB.auth.currentUser);
-    STATE.settings.userName = name.trim().split(' ').pop();
+    STATE.settings.userName = name.trim();
     await saveSettings();
     renderHero();
     if(typeof showToast==='function') showToast('Đã cập nhật tên hiển thị');
