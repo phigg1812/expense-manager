@@ -21,7 +21,7 @@
      ============================================================ */
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js";
   import {
-    getAuth, GoogleAuthProvider, signInWithRedirect, getRedirectResult, onAuthStateChanged,
+    getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, onAuthStateChanged,
     signInWithCredential, signOut, updateProfile
   } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js";
   import {
@@ -84,10 +84,25 @@
         alert('Đăng nhập thất bại: ' + (err && (err.message || err.code) || 'Lỗi không xác định'));
       }).finally(done);
     }
-    // signInWithRedirect is used instead of signInWithPopup: popups are unreliable
-    // on mobile browsers/webviews (they get silently cancelled, e.g.
-    // "auth/cancelled-popup-request"). Redirect navigates away and back instead.
-    return signInWithRedirect(auth, googleProvider).catch(err=>{
+    // signInWithPopup is used for web: signInWithRedirect depends on a cross-domain
+    // iframe (to authDomain) to hand back the sign-in result. Browsers that block
+    // third-party cookies (Incognito by default, Safari ITP, newer Chrome privacy
+    // settings) silently break that handshake — Google sign-in succeeds but the
+    // app bounces back to the login screen with no visible error. Popup opens
+    // accounts.google.com as its own top-level window, so it isn't a third-party
+    // context and isn't affected by that cookie blocking.
+    return signInWithPopup(auth, googleProvider).catch(err=>{
+      if (err && (err.code === 'auth/popup-closed-by-user' || err.code === 'auth/cancelled-popup-request')) {
+        return; // user closed the Google window themselves; not a real error
+      }
+      if (err && err.code === 'auth/popup-blocked') {
+        // Browser blocked the popup outright (e.g. popup blocker) — fall back
+        // to redirect, which still works fine as long as cookies aren't blocked.
+        return signInWithRedirect(auth, googleProvider).catch(err2=>{
+          console.error('[Firebase] sign-in error', err2);
+          alert('Đăng nhập thất bại: ' + (err2 && (err2.message || err2.code) || 'Lỗi không xác định'));
+        });
+      }
       console.error('[Firebase] sign-in error', err);
       alert('Đăng nhập thất bại: ' + (err && (err.message || err.code) || 'Lỗi không xác định'));
     }).finally(done);
