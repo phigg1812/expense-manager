@@ -306,7 +306,7 @@ h1,h2,h3,h4{font-family:var(--font-display);font-weight:800;letter-spacing:-0.02
 .sidebar.collapsed{width:var(--sidebar-w-collapsed);}
 .sidebar-brand{
   display:flex;align-items:center;gap:10px;
-  height:var(--header-h);padding:0 20px;flex-shrink:0;
+  height:calc(var(--header-h) + env(safe-area-inset-top));padding:env(safe-area-inset-top) 20px 0;flex-shrink:0;
   border-bottom:1px solid var(--border);
 }
 .sidebar-brand .logo-mark{
@@ -362,12 +362,12 @@ h1,h2,h3,h4{font-family:var(--font-display);font-weight:800;letter-spacing:-0.02
 
 /* Header */
 .topbar{
-  height:var(--header-h);
+  height:calc(var(--header-h) + env(safe-area-inset-top));
   background:rgba(248,250,252,.82);
   backdrop-filter:blur(10px);
   border-bottom:1px solid var(--border);
   display:flex;align-items:center;gap:14px;
-  padding:0 var(--space-6);
+  padding:env(safe-area-inset-top) var(--space-6) 0;
   position:sticky;top:0;z-index:30;
 }
 [data-theme="dark"] .topbar{background:rgba(15,20,32,.82);}
@@ -415,7 +415,7 @@ h1,h2,h3,h4{font-family:var(--font-display);font-weight:800;letter-spacing:-0.02
 }
 @media (max-width:640px){
   .main-content{padding:var(--space-4);}
-  .topbar{padding:0 var(--space-4);}
+  .topbar{padding:env(safe-area-inset-top) var(--space-4) 0;}
 }
 </style>
 <style>
