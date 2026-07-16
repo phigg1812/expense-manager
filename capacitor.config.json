@@ -16,9 +16,8 @@
       "splashImmersive": true
     },
     "StatusBar": {
-      "overlaysWebView": false,
-      "style": "DARK",
-      "backgroundColor": "#F8FAFC"
+      "overlaysWebView": true,
+      "style": "DARK"
     },
     "FirebaseAuthentication": {
       "skipNativeAuth": false,
