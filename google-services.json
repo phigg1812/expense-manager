@@ -22,6 +22,14 @@
           }
         },
         {
+          "client_id": "752531317749-velgevfbdgt8n62uco10ns9l10vbs1if.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.phi.sotheodoi",
+            "certificate_hash": "a073607ee367177d76875de8e335f17a7002795e"
+          }
+        },
+        {
           "client_id": "752531317749-e4hrffaq0ecef3gf1ro4mtbo2uogk3u1.apps.googleusercontent.com",
           "client_type": 3
         }
