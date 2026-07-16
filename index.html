@@ -21,7 +21,7 @@
      ============================================================ */
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js";
   import {
-    getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, onAuthStateChanged,
+    getAuth, GoogleAuthProvider, signInWithRedirect, getRedirectResult, onAuthStateChanged,
     signInWithCredential, signOut, updateProfile
   } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js";
   import {
@@ -84,25 +84,10 @@
         alert('Đăng nhập thất bại: ' + (err && (err.message || err.code) || 'Lỗi không xác định'));
       }).finally(done);
     }
-    // signInWithPopup is used for web: signInWithRedirect depends on a cross-domain
-    // iframe (to authDomain) to hand back the sign-in result. Browsers that block
-    // third-party cookies (Incognito by default, Safari ITP, newer Chrome privacy
-    // settings) silently break that handshake — Google sign-in succeeds but the
-    // app bounces back to the login screen with no visible error. Popup opens
-    // accounts.google.com as its own top-level window, so it isn't a third-party
-    // context and isn't affected by that cookie blocking.
-    return signInWithPopup(auth, googleProvider).catch(err=>{
-      if (err && (err.code === 'auth/popup-closed-by-user' || err.code === 'auth/cancelled-popup-request')) {
-        return; // user closed the Google window themselves; not a real error
-      }
-      if (err && err.code === 'auth/popup-blocked') {
-        // Browser blocked the popup outright (e.g. popup blocker) — fall back
-        // to redirect, which still works fine as long as cookies aren't blocked.
-        return signInWithRedirect(auth, googleProvider).catch(err2=>{
-          console.error('[Firebase] sign-in error', err2);
-          alert('Đăng nhập thất bại: ' + (err2 && (err2.message || err2.code) || 'Lỗi không xác định'));
-        });
-      }
+    // signInWithRedirect is used instead of signInWithPopup: popups are unreliable
+    // on mobile browsers/webviews (they get silently cancelled, e.g.
+    // "auth/cancelled-popup-request"). Redirect navigates away and back instead.
+    return signInWithRedirect(auth, googleProvider).catch(err=>{
       console.error('[Firebase] sign-in error', err);
       alert('Đăng nhập thất bại: ' + (err && (err.message || err.code) || 'Lỗi không xác định'));
     }).finally(done);
@@ -321,7 +306,7 @@ h1,h2,h3,h4{font-family:var(--font-display);font-weight:800;letter-spacing:-0.02
 .sidebar.collapsed{width:var(--sidebar-w-collapsed);}
 .sidebar-brand{
   display:flex;align-items:center;gap:10px;
-  height:var(--header-h);padding:0 20px;flex-shrink:0;
+  height:calc(var(--header-h) + env(safe-area-inset-top));padding:env(safe-area-inset-top) 20px 0;flex-shrink:0;
   border-bottom:1px solid var(--border);
 }
 .sidebar-brand .logo-mark{
@@ -377,12 +362,12 @@ h1,h2,h3,h4{font-family:var(--font-display);font-weight:800;letter-spacing:-0.02
 
 /* Header */
 .topbar{
-  height:var(--header-h);
+  height:calc(var(--header-h) + env(safe-area-inset-top));
   background:rgba(248,250,252,.82);
   backdrop-filter:blur(10px);
   border-bottom:1px solid var(--border);
   display:flex;align-items:center;gap:14px;
-  padding:0 var(--space-6);
+  padding:env(safe-area-inset-top) var(--space-6) 0;
   position:sticky;top:0;z-index:30;
 }
 [data-theme="dark"] .topbar{background:rgba(15,20,32,.82);}
@@ -430,7 +415,7 @@ h1,h2,h3,h4{font-family:var(--font-display);font-weight:800;letter-spacing:-0.02
 }
 @media (max-width:640px){
   .main-content{padding:var(--space-4);}
-  .topbar{padding:0 var(--space-4);}
+  .topbar{padding:env(safe-area-inset-top) var(--space-4) 0;}
 }
 </style>
 <style>
@@ -2914,7 +2899,7 @@ document.getElementById('editNameBtn').addEventListener('click', async ()=>{
   try{
     await window.FB.updateProfile(user, {displayName: name.trim()});
     updateProfileUI(window.FB.auth.currentUser);
-    STATE.settings.userName = name.trim();
+    STATE.settings.userName = name.trim().split(' ').pop();
     await saveSettings();
     renderHero();
     if(typeof showToast==='function') showToast('Đã cập nhật tên hiển thị');
