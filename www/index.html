@@ -21,7 +21,7 @@
      ============================================================ */
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js";
   import {
-    getAuth, GoogleAuthProvider, signInWithRedirect, getRedirectResult, onAuthStateChanged,
+    getAuth, GoogleAuthProvider, signInWithRedirect, signInWithPopup, getRedirectResult, onAuthStateChanged,
     signInWithCredential, signOut, updateProfile
   } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js";
   import {
@@ -84,12 +84,23 @@
         alert('Đăng nhập thất bại: ' + (err && (err.message || err.code) || 'Lỗi không xác định'));
       }).finally(done);
     }
-    // signInWithRedirect is used instead of signInWithPopup: popups are unreliable
-    // on mobile browsers/webviews (they get silently cancelled, e.g.
-    // "auth/cancelled-popup-request"). Redirect navigates away and back instead.
-    return signInWithRedirect(auth, googleProvider).catch(err=>{
+    // signInWithPopup is used on the web instead of signInWithRedirect: this app's
+    // authDomain (expensemanager-59446.firebaseapp.com) is a different domain than
+    // where the app is actually hosted (e.g. GitHub Pages). Since Chrome 115+
+    // (and already in Firefox/Safari), browsers block the cross-domain storage
+    // access that signInWithRedirect relies on to hand the session back to the
+    // app's real domain — so the Google sign-in appears to succeed but the app
+    // never detects it and stays stuck on the login screen. signInWithPopup uses
+    // postMessage between windows instead, which isn't affected by that block.
+    return signInWithPopup(auth, googleProvider).catch(err=>{
       console.error('[Firebase] sign-in error', err);
-      alert('Đăng nhập thất bại: ' + (err && (err.message || err.code) || 'Lỗi không xác định'));
+      if (err && err.code === 'auth/popup-blocked') {
+        alert('Trình duyệt đã chặn popup đăng nhập. Vui lòng cho phép popup cho trang này rồi thử lại.');
+      } else if (err && (err.code === 'auth/cancelled-popup-request' || err.code === 'auth/popup-closed-by-user')) {
+        // User closed/cancelled the popup themselves — no need to alert.
+      } else {
+        alert('Đăng nhập thất bại: ' + (err && (err.message || err.code) || 'Lỗi không xác định'));
+      }
     }).finally(done);
   };
   window.fbSignOut = function(){
