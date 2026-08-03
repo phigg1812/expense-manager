@@ -1349,6 +1349,8 @@ const ICONS = {
   sparkles:'<path d="M11 3v3M11 15v3M4.5 9h3M14.5 9h3M6 6l1.7 1.7M14.3 6 16 4.3M6 12l1.7-1.7M17 17l-1.5-1.5"/><path d="m11 3 1.2 3.6L16 8l-3.8 1.4L11 13l-1.2-3.6L6 8l3.8-1.4Z"/>',
   'chevron-left':'<path d="m15 18-6-6 6-6"/>',
   'chevron-right':'<path d="m9 18 6-6-6-6"/>',
+  'chevron-up':'<path d="m18 15-6-6-6 6"/>',
+  'chevron-down':'<path d="m6 9 6 6 6-6"/>',
   x:'<path d="m6 6 12 12M18 6 6 18"/>',
   'trash-2':'<path d="M4 7h16"/><path d="M9 7V4h6v3"/><path d="M6 7l1 13a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-13"/><path d="M10 11v6M14 11v6"/>',
   edit:'<path d="M4 20h4L18.5 9.5a2.1 2.1 0 0 0-3-3L5 17v3Z"/><path d="m14 6 4 4"/>',
@@ -1425,7 +1427,7 @@ const I18N = {
     'insight.spent':'Bạn đã chi','insight.for':'cho','insight.upcoming':'Trong 7 ngày tới cần chuẩn bị',
     'status.pendingShort':'Chưa TT','status.paidShort':'Đã TT',
     'dueSoon.today':'Đến hạn hôm nay','dueSoon.oneDay':'Còn 1 ngày','dueSoon.days':'Còn {n} ngày',
-    'action.edit':'Sửa','recurring.tag':'Định kỳ',
+    'action.edit':'Sửa','recurring.tag':'Định kỳ','action.moveUp':'Di chuyển lên','action.moveDown':'Di chuyển xuống',
     'filter.allCategories':'Tất cả danh mục','filter.allWallets':'Tất cả ví','filter.allTime':'Mọi thời điểm',
     'filter.amountFrom':'Từ (đ)','filter.amountTo':'Đến (đ)',
     'sort.due':'Sắp xếp: Hạn TT','sort.created':'Sắp xếp: Ngày tạo','sort.amount':'Sắp xếp: Số tiền','sort.name':'Sắp xếp: Tên','sort.toggleTitle':'Đổi chiều sắp xếp',
@@ -1477,7 +1479,7 @@ const I18N = {
     'insight.spent':"You've spent",'insight.for':'on','insight.upcoming':'In the next 7 days you need to set aside',
     'status.pendingShort':'Unpaid','status.paidShort':'Paid',
     'dueSoon.today':'Due today','dueSoon.oneDay':'1 day left','dueSoon.days':'{n} days left',
-    'action.edit':'Edit','recurring.tag':'Recurring',
+    'action.edit':'Edit','recurring.tag':'Recurring','action.moveUp':'Move up','action.moveDown':'Move down',
     'filter.allCategories':'All categories','filter.allWallets':'All wallets','filter.allTime':'Any time',
     'filter.amountFrom':'From','filter.amountTo':'To',
     'sort.due':'Sort: Due date','sort.created':'Sort: Created date','sort.amount':'Sort: Amount','sort.name':'Sort: Name','sort.toggleTitle':'Toggle sort direction',
@@ -1529,7 +1531,7 @@ const I18N = {
     'insight.spent':'你已花费','insight.for':'在','insight.upcoming':'未来 7 天需准备',
     'status.pendingShort':'未付','status.paidShort':'已付',
     'dueSoon.today':'今天到期','dueSoon.oneDay':'剩 1 天','dueSoon.days':'剩 {n} 天',
-    'action.edit':'编辑','recurring.tag':'定期',
+    'action.edit':'编辑','recurring.tag':'定期','action.moveUp':'上移','action.moveDown':'下移',
     'filter.allCategories':'全部类别','filter.allWallets':'全部钱包','filter.allTime':'任意时间',
     'filter.amountFrom':'从','filter.amountTo':'到',
     'sort.due':'排序：到期日','sort.created':'排序：创建日期','sort.amount':'排序：金额','sort.name':'排序：名称','sort.toggleTitle':'切换排序方向',
@@ -1654,8 +1656,8 @@ const DEFAULT_WALLETS = [
   {id:'wal_fund', name:'Quỹ', icon:'💰'},
 ];
 const DEFAULT_PAYMENT_METHODS = [
-  {id:'pm_cash', name:'Tiền mặt'}, {id:'pm_card', name:'Thẻ ngân hàng'},
-  {id:'pm_transfer', name:'Chuyển khoản'}, {id:'pm_ewallet', name:'Ví điện tử'},
+  {id:'pm_cash', name:'Tiền mặt', order:0}, {id:'pm_card', name:'Thẻ ngân hàng', order:1},
+  {id:'pm_transfer', name:'Chuyển khoản', order:2}, {id:'pm_ewallet', name:'Ví điện tử', order:3},
 ];
 async function seedIfEmpty(){
   const [cats, wallets, pms, settingsRows] = await Promise.all([
@@ -1696,6 +1698,7 @@ async function loadAllState(){
   STATE.categories = categories;
   STATE.wallets = wallets;
   STATE.paymentMethods = paymentMethods;
+  await sortAndMigratePaymentMethodsOrder();
   STATE.recurring = recurring;
   STATE.backups = backups.sort((a,b)=> b.createdAt - a.createdAt);
   const appSettings = settingsRows.find(s=>s.key==='app');
@@ -2590,25 +2593,56 @@ document.getElementById('addWalletBtn').addEventListener('click', async ()=>{
   input.value=''; renderWalletManageList();
 });
 
+// Firestore doesn't guarantee document read order, so payment-method order is
+// tracked explicitly via an `order` field. This keeps the order the user sets
+// in Settings in sync with the "Phương thức" dropdown in the add-expense form,
+// which simply reads STATE.paymentMethods in array order.
+async function sortAndMigratePaymentMethodsOrder(){
+  let needsMigration = false;
+  STATE.paymentMethods.forEach((p, idx)=>{
+    if(typeof p.order !== 'number'){ p.order = idx; needsMigration = true; }
+  });
+  STATE.paymentMethods.sort((a,b)=> a.order - b.order);
+  if(needsMigration){
+    await Promise.all(STATE.paymentMethods.map(p=> dbPut('paymentMethods', p)));
+  }
+}
+async function movePaymentMethod(id, direction){
+  const list = STATE.paymentMethods;
+  const i = list.findIndex(p=>p.id===id);
+  const j = i + direction;
+  if(i<0 || j<0 || j>=list.length) return;
+  [list[i], list[j]] = [list[j], list[i]];
+  list.forEach((p, idx)=> p.order = idx);
+  await Promise.all([dbPut('paymentMethods', list[i]), dbPut('paymentMethods', list[j])]);
+  renderPaymentManageList();
+}
 function renderPaymentManageList(){
   const el = document.getElementById('paymentList');
-  el.innerHTML = STATE.paymentMethods.map(p=>`
+  el.innerHTML = STATE.paymentMethods.map((p,idx)=>`
     <div class="manage-item">
       <div class="m-dot" style="background:var(--primary-soft);">${iconSVG('banknote',14)}</div>
       <div class="m-name">${escapeHTML(p.name)}</div>
-      <div class="m-actions"><button class="icon-btn btn-sm" style="width:30px;height:30px;color:var(--danger);" data-del-pm="${p.id}">${iconSVG('trash-2',13)}</button></div>
+      <div class="m-actions">
+        <button class="icon-btn btn-sm" style="width:30px;height:30px;" data-move-pm-up="${p.id}" ${idx===0?'disabled':''} title="${t('action.moveUp')}">${iconSVG('chevron-up',13)}</button>
+        <button class="icon-btn btn-sm" style="width:30px;height:30px;" data-move-pm-down="${p.id}" ${idx===STATE.paymentMethods.length-1?'disabled':''} title="${t('action.moveDown')}">${iconSVG('chevron-down',13)}</button>
+        <button class="icon-btn btn-sm" style="width:30px;height:30px;color:var(--danger);" data-del-pm="${p.id}">${iconSVG('trash-2',13)}</button>
+      </div>
     </div>`).join('');
+  el.querySelectorAll('[data-move-pm-up]').forEach(b=>b.addEventListener('click', ()=> movePaymentMethod(b.dataset.movePmUp, -1)));
+  el.querySelectorAll('[data-move-pm-down]').forEach(b=>b.addEventListener('click', ()=> movePaymentMethod(b.dataset.movePmDown, 1)));
   el.querySelectorAll('[data-del-pm]').forEach(b=>b.addEventListener('click', async ()=>{
     const id = b.dataset.delPm;
     STATE.paymentMethods = STATE.paymentMethods.filter(p=>p.id!==id);
     await dbDelete('paymentMethods', id);
+    STATE.paymentMethods.forEach((p, idx)=> p.order = idx);
     renderPaymentManageList();
   }));
 }
 document.getElementById('addPaymentBtn').addEventListener('click', async ()=>{
   const input = document.getElementById('newPaymentInput');
   const name = input.value.trim(); if(!name) return;
-  const p = { id:uid('pm'), name };
+  const p = { id:uid('pm'), name, order:STATE.paymentMethods.length };
   STATE.paymentMethods.push(p); await dbPut('paymentMethods', p);
   input.value=''; renderPaymentManageList();
 });
