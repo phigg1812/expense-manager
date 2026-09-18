@@ -30,6 +30,7 @@
   } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
   import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-storage.js";
   import { getAI, getGenerativeModel, GoogleAIBackend } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-ai.js";
+  import { initializeAppCheck, ReCaptchaEnterpriseProvider } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-app-check.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyDL-4hDixuXZFi3YSp4keTw3Q1D5XUyDL8",
@@ -41,6 +42,13 @@
   };
 
   const app = initializeApp(firebaseConfig);
+  // Protect browser requests with Firebase App Check. The Android package will
+  // use its own native App Check provider when that app is registered later.
+  const nativeRuntime = !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
+  const appCheck = nativeRuntime ? null : initializeAppCheck(app, {
+    provider: new ReCaptchaEnterpriseProvider('6LeWz8EtAAAAAJUHsQ1CMqQm_b52NqfQmXHK9K11'),
+    isTokenAutoRefreshEnabled: true
+  });
   const auth = getAuth(app);
   const googleProvider = new GoogleAuthProvider();
   // Offline-first cache: app keeps working with no network, then syncs when back online.
@@ -51,7 +59,7 @@
   const ai = getAI(app, { backend: new GoogleAIBackend() });
 
   window.FB = {
-    app, auth, db, storage, googleProvider, currentUser: null,
+    app, appCheck, auth, db, storage, googleProvider, currentUser: null,
     collection, doc, getDocs, setDoc, deleteDoc, writeBatch,
     ref, uploadBytes, getDownloadURL, updateProfile,
     ai, getGenerativeModel
