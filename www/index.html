@@ -29,6 +29,7 @@
     collection, doc, getDocs, setDoc, deleteDoc, writeBatch
   } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
   import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-storage.js";
+  import { getAI, getGenerativeModel, GoogleAIBackend } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-ai.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyDL-4hDixuXZFi3YSp4keTw3Q1D5XUyDL8",
@@ -47,11 +48,13 @@
     localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() })
   });
   const storage = getStorage(app);
+  const ai = getAI(app, { backend: new GoogleAIBackend() });
 
   window.FB = {
     app, auth, db, storage, googleProvider, currentUser: null,
     collection, doc, getDocs, setDoc, deleteDoc, writeBatch,
-    ref, uploadBytes, getDownloadURL, updateProfile
+    ref, uploadBytes, getDownloadURL, updateProfile,
+    ai, getGenerativeModel
   };
 
   function isNativeApp(){
@@ -1220,6 +1223,10 @@ table.exp-table{width:100%;border-collapse:collapse;font-size:13px;min-width:760
       <div class="field">
         <label data-i18n="field.name">Tên khoản chi</label>
         <input type="text" id="fName" required data-i18n-ph="field.namePh" placeholder="VD: Tiền điện tháng 7">
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:9px;">
+          <button type="button" class="btn btn-sm" id="aiClassifyBtn" style="color:var(--primary);border-color:var(--primary);"><span style="font-size:15px;">✨</span> AI phân tích</button>
+          <span id="aiClassifyStatus" style="font-size:11.5px;color:var(--text-secondary);line-height:1.4;"></span>
+        </div>
       </div>
       <div class="field">
         <label data-i18n="field.amount">Số tiền</label>
@@ -2251,6 +2258,52 @@ function formatAmountInput(el){
 formatAmountInput(document.getElementById('fAmount'));
 formatAmountInput(document.getElementById('rAmount'));
 
+async function classifyExpenseWithAI(){
+  const nameInput=document.getElementById('fName'), amountInput=document.getElementById('fAmount');
+  const notesInput=document.getElementById('fNotes'), button=document.getElementById('aiClassifyBtn');
+  const status=document.getElementById('aiClassifyStatus'), rawText=nameInput.value.trim();
+  if(!rawText){ showToast('Hãy nhập nội dung khoản chi trước'); nameInput.focus(); return; }
+  if(!window.FB||!window.FB.ai){ showToast('Firebase AI Logic chưa sẵn sàng'); return; }
+  button.disabled=true; button.innerHTML='<span>⏳</span> Đang phân tích...'; status.textContent='Gemini đang đọc nội dung';
+  try{
+    const categoryIds=STATE.categories.map(c=>c.id), walletIds=STATE.wallets.map(w=>w.id), paymentIds=STATE.paymentMethods.map(p=>p.id);
+    if(!categoryIds.length||!walletIds.length||!paymentIds.length) throw new Error('Danh mục, ví hoặc phương thức thanh toán đang trống.');
+    const responseSchema={type:'object',properties:{
+      suggestedName:{type:'string'}, amount:{type:'number'},
+      categoryId:{type:'string',enum:categoryIds}, walletId:{type:'string',enum:walletIds},
+      paymentMethodId:{type:'string',enum:paymentIds}, confidence:{type:'number'}, reason:{type:'string'}
+    },required:['suggestedName','amount','categoryId','walletId','paymentMethodId','confidence','reason']};
+    const model=window.FB.getGenerativeModel(window.FB.ai,{model:'gemini-3.5-flash',generationConfig:{temperature:.1,maxOutputTokens:512,responseMimeType:'application/json',responseSchema}});
+    const prompt=[
+      'Bạn là trợ lý phân loại chi phí cá nhân bằng tiếng Việt.',
+      'Chuẩn hóa suggestedName thành tên ngắn gọn; bỏ số tiền và cách thanh toán khỏi tên.',
+      'amount là số tiền nhận diện được; nếu không có thì trả 0.',
+      'Chỉ chọn ID trong danh sách. Nếu ví chưa rõ, chọn ví hợp lý nhất.',
+      'confidence từ 0 đến 1; reason là một câu ngắn.',
+      'Nội dung: '+rawText,
+      'Ghi chú: '+(notesInput.value.trim()||'(không có)'),
+      'Danh mục: '+JSON.stringify(STATE.categories.map(c=>({id:c.id,name:c.name}))),
+      'Ví: '+JSON.stringify(STATE.wallets.map(w=>({id:w.id,name:w.name}))),
+      'Phương thức: '+JSON.stringify(STATE.paymentMethods.map(p=>({id:p.id,name:p.name})))
+    ].join('\n');
+    const result=await model.generateContent(prompt), parsed=JSON.parse(result.response.text());
+    if(!categoryIds.includes(parsed.categoryId)||!walletIds.includes(parsed.walletId)||!paymentIds.includes(parsed.paymentMethodId)) throw new Error('AI trả về lựa chọn không hợp lệ.');
+    const confidence=Math.max(0,Math.min(1,Number(parsed.confidence)||0));
+    if(parsed.suggestedName&&confidence>=.55) nameInput.value=String(parsed.suggestedName).trim().slice(0,150);
+    if(Number(parsed.amount)>0) amountInput.value=new Intl.NumberFormat('vi-VN').format(Math.round(Number(parsed.amount)));
+    renderCategoryChips(document.getElementById('fCategoryChips'),parsed.categoryId);
+    document.getElementById('fWallet').value=parsed.walletId;
+    document.getElementById('fPaymentMethod').value=parsed.paymentMethodId;
+    status.textContent=Math.round(confidence*100)+'% · '+String(parsed.reason||'Đã phân loại');
+    showToast('AI đã điền thông tin khoản chi');
+  }catch(err){
+    console.error('[AI classify]',err); status.textContent='';
+    showToast('AI chưa thể phân tích: '+(err&&(err.message||err.code)||'Lỗi không xác định'));
+  }finally{
+    button.disabled=false; button.innerHTML='<span style="font-size:15px;">✨</span> AI phân tích';
+  }
+}
+
 function openExpenseDrawer(id){
   const isEdit = !!id;
   const exp = isEdit ? STATE.expenses.find(e=>e.id===id) : null;
@@ -2268,6 +2321,7 @@ function openExpenseDrawer(id){
   if(exp) document.getElementById('fPaymentMethod').value = exp.paymentMethodId;
   document.getElementById('fPaid').checked = exp ? !!exp.paid : false;
   document.getElementById('fNotes').value = exp ? (exp.notes||'') : '';
+  document.getElementById('aiClassifyStatus').textContent = '';
   document.getElementById('fCurrencySuffix').textContent = CURRENCY_SYMBOLS[STATE.settings.currency]||'đ';
   renderCategoryChips(document.getElementById('fCategoryChips'), exp ? exp.categoryId : (STATE.categories[0]&&STATE.categories[0].id));
   document.getElementById('drawerOverlay').classList.add('show');
@@ -2331,6 +2385,7 @@ document.getElementById('drawerCloseBtn').addEventListener('click', closeExpense
 document.getElementById('drawerCancelBtn').addEventListener('click', closeExpenseDrawer);
 document.getElementById('drawerOverlay').addEventListener('click', closeExpenseDrawer);
 document.getElementById('drawerDeleteBtn').addEventListener('click', handleDeleteFromDrawer);
+document.getElementById('aiClassifyBtn').addEventListener('click', classifyExpenseWithAI);
 document.getElementById('confirmCancelBtn').addEventListener('click', ()=>closeConfirm(false));
 document.getElementById('confirmOkBtn').addEventListener('click', ()=>closeConfirm(true));
 document.getElementById('confirmOverlay').addEventListener('click', (e)=>{ if(e.target.id==='confirmOverlay') closeConfirm(false); });
