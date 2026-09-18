@@ -2271,13 +2271,20 @@ async function classifyExpenseWithAI(){
     const responseSchema={type:'object',properties:{
       suggestedName:{type:'string'}, amount:{type:'number'},
       categoryId:{type:'string',enum:categoryIds}, walletId:{type:'string',enum:walletIds},
-      paymentMethodId:{type:'string',enum:paymentIds}, confidence:{type:'number'}, reason:{type:'string'}
-    },required:['suggestedName','amount','categoryId','walletId','paymentMethodId','confidence','reason']};
+      paymentMethodId:{type:'string',enum:paymentIds},
+      createdDate:{type:'string'}, dueDate:{type:'string'},
+      confidence:{type:'number'}, reason:{type:'string'}
+    },required:['suggestedName','amount','categoryId','walletId','paymentMethodId','createdDate','dueDate','confidence','reason']};
     const model=window.FB.getGenerativeModel(window.FB.ai,{model:'gemini-3.5-flash',generationConfig:{temperature:.1,maxOutputTokens:512,responseMimeType:'application/json',responseSchema}});
     const prompt=[
       'Bạn là trợ lý phân loại chi phí cá nhân bằng tiếng Việt.',
       'Chuẩn hóa suggestedName thành tên ngắn gọn; bỏ số tiền và cách thanh toán khỏi tên.',
       'amount là số tiền nhận diện được; nếu không có thì trả 0.',
+      'Ngày hiện tại là '+todayISO()+'. Trả createdDate và dueDate theo YYYY-MM-DD.',
+      'Nếu câu không nói ngày tạo/ngày chi/ngày mua thì createdDate là ngày hiện tại.',
+      'Một ngày đứng riêng như 19/8 mặc định là dueDate; nếu thiếu năm thì dùng năm phù hợp gần nhất.',
+      'Cụm như tháng 7 trong tên hóa đơn là kỳ hóa đơn, không phải một ngày cụ thể.',
+      'Nếu không có hạn thanh toán thì giữ dueDate mặc định là '+document.getElementById('fDueDate').value+'.',
       'Chỉ chọn ID trong danh sách. Nếu ví chưa rõ, chọn ví hợp lý nhất.',
       'confidence từ 0 đến 1; reason là một câu ngắn.',
       'Nội dung: '+rawText,
@@ -2294,6 +2301,8 @@ async function classifyExpenseWithAI(){
     renderCategoryChips(document.getElementById('fCategoryChips'),parsed.categoryId);
     document.getElementById('fWallet').value=parsed.walletId;
     document.getElementById('fPaymentMethod').value=parsed.paymentMethodId;
+    if(isValidISODate(parsed.createdDate)) document.getElementById('fCreatedDate').value=parsed.createdDate;
+    if(isValidISODate(parsed.dueDate)) document.getElementById('fDueDate').value=parsed.dueDate;
     status.textContent=Math.round(confidence*100)+'% · '+String(parsed.reason||'Đã phân loại');
     showToast('AI đã điền thông tin khoản chi');
   }catch(err){
@@ -2302,6 +2311,12 @@ async function classifyExpenseWithAI(){
   }finally{
     button.disabled=false; button.innerHTML='<span style="font-size:15px;">✨</span> AI phân tích';
   }
+}
+function isValidISODate(value){
+  const text=String(value||'');
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(text)) return false;
+  const [y,m,d]=text.split('-').map(Number), date=new Date(y,m-1,d);
+  return date.getFullYear()===y&&date.getMonth()===m-1&&date.getDate()===d;
 }
 
 function openExpenseDrawer(id){
