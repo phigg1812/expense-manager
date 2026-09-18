@@ -2283,7 +2283,6 @@ async function classifyExpenseWithAI(){
       createdDate:{type:'string'}, dueDate:{type:'string'},
       confidence:{type:'number'}, reason:{type:'string'}
     },required:['suggestedName','amount','categoryId','walletId','paymentMethodId','createdDate','dueDate','confidence','reason']};
-    const model=window.FB.getGenerativeModel(window.FB.ai,{model:'gemini-3.5-flash',generationConfig:{temperature:.1,maxOutputTokens:512,responseMimeType:'application/json',responseSchema}});
     const prompt=[
       'Bạn là trợ lý phân loại chi phí cá nhân bằng tiếng Việt.',
       'Chuẩn hóa suggestedName thành tên ngắn gọn; bỏ số tiền và cách thanh toán khỏi tên.',
@@ -2301,7 +2300,29 @@ async function classifyExpenseWithAI(){
       'Ví: '+JSON.stringify(STATE.wallets.map(w=>({id:w.id,name:w.name}))),
       'Phương thức: '+JSON.stringify(STATE.paymentMethods.map(p=>({id:p.id,name:p.name})))
     ].join('\n');
-    const result=await model.generateContent(prompt), parsed=JSON.parse(result.response.text());
+    // Classification is a small task, so prefer Flash-Lite. If a model is
+    // temporarily busy, automatically retry with another supported model.
+    const modelNames=['gemini-3.5-flash-lite','gemini-3.8-flash','gemini-3.5-flash'];
+    let result=null, lastError=null;
+    for(const modelName of modelNames){
+      const model=window.FB.getGenerativeModel(window.FB.ai,{model:modelName,generationConfig:{temperature:.1,maxOutputTokens:512,responseMimeType:'application/json',responseSchema}});
+      for(let attempt=1;attempt<=2;attempt++){
+        try{
+          status.textContent=attempt===1?'Gemini đang đọc nội dung':'Gemini đang thử lại...';
+          result=await model.generateContent(prompt);
+          break;
+        }catch(error){
+          lastError=error;
+          const message=String(error&&(error.message||error.code)||'');
+          const temporary=/\b(429|500|503)\b|high demand|overload|temporar|unavailable/i.test(message);
+          if(!temporary) throw error;
+          if(attempt<2) await new Promise(resolve=>setTimeout(resolve,700));
+        }
+      }
+      if(result) break;
+    }
+    if(!result) throw lastError||new Error('Các máy chủ AI đang bận. Vui lòng thử lại sau.');
+    const parsed=JSON.parse(result.response.text());
     if(!categoryIds.includes(parsed.categoryId)||!walletIds.includes(parsed.walletId)||!paymentIds.includes(parsed.paymentMethodId)) throw new Error('AI trả về lựa chọn không hợp lệ.');
     const confidence=Math.max(0,Math.min(1,Number(parsed.confidence)||0));
     if(parsed.suggestedName&&confidence>=.55) nameInput.value=String(parsed.suggestedName).trim().slice(0,150);
